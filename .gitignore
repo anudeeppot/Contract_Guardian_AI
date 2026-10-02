@@ -59,8 +59,20 @@ obj/
 *.log
 logs/
 
-# Environment secrets
+# Environment secrets — NEVER commit real secrets
 .env
+**/.env
+.env.local
+**/.env.local
+.env.production
+**/.env.production
+.env.staging
+**/.env.staging
+.env.*.local
+**/.env.*.local
+# Allow example/template files (safe to commit)
+!.env.example
+!**/.env.example
 
 # Temporary files
 *.tmp

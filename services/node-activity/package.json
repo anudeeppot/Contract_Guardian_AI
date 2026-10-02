@@ -1,0 +1,39 @@
+{
+  "name": "contract-guardian-activity-service",
+  "version": "1.0.0",
+  "description": "Node.js/Express Activity & User microservice for Contract Guardian AI (CO4, CO5)",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --forceExit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^8.0.0",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.0",
+    "express-rate-limit": "^7.1.5",
+    "winston": "^3.11.0",
+    "socket.io": "^4.6.1",
+    "sequelize": "^6.35.0",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "nodemon": "^3.0.2",
+    "@types/jest": "^29.5.8"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
+  }
+}

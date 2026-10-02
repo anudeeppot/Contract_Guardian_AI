@@ -1,0 +1,420 @@
+# =============================================================
+# Kubernetes Manifests for Contract Guardian AI
+# CO6: Pods, Deployments, Services, Ingress, ConfigMaps, Secrets
+# =============================================================
+
+---
+# NAMESPACE
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: contract-guardian
+  labels:
+    app: contract-guardian
+
+---
+# CONFIG MAP (CO6: ConfigMaps for non-sensitive config)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: contract-guardian
+data:
+  APP_ENV: "production"
+  API_V1_PREFIX: "/api/v1"
+  CORS_ORIGINS: "http://localhost,http://contract-guardian.local"
+  LOG_LEVEL: "INFO"
+  MONGODB_DB: "contract_guardian"
+  VECTOR_SEARCH_TOP_K: "5"
+  CHUNK_SIZE: "1000"
+
+---
+# SECRET TEMPLATE (CO6: Kubernetes Secrets)
+# NOTE: In production, use sealed-secrets or external-secrets operator
+# Values here are base64-encoded PLACEHOLDERS - replace before deploying
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: contract-guardian
+type: Opaque
+data:
+  # echo -n 'your-actual-jwt-secret' | base64
+  JWT_SECRET: Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24=
+  # echo -n 'postgresql+asyncpg://contract_guardian:password@postgres:5432/contract_guardian' | base64
+  DATABASE_URL: cG9zdGdyZXNxbCthc3luY3BnOi8vY29udHJhY3RfZ3VhcmRpYW46Y29udHJhY3RfZ3VhcmRpYW5AcG9zdGdyZXM6NTQzMi9jb250cmFjdF9ndWFyZGlhbg==
+  MONGO_PASSWORD: Y2dwYXNzd29yZA==
+  POSTGRES_PASSWORD: Y29udHJhY3RfZ3VhcmRpYW4=
+
+---
+# POSTGRESQL DEPLOYMENT
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: contract-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: contract_guardian
+            - name: POSTGRES_USER
+              value: contract_guardian
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "contract_guardian"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+
+---
+# POSTGRESQL PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: contract-guardian
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# POSTGRESQL SERVICE
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: contract-guardian
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+# MONGODB DEPLOYMENT
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  namespace: contract-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:7-jammy
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: cgadmin
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MONGO_PASSWORD
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+          readinessProbe:
+            exec:
+              command: ["mongosh", "--eval", "db.adminCommand('ping')"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+      volumes:
+        - name: mongodb-data
+          persistentVolumeClaim:
+            claimName: mongodb-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-pvc
+  namespace: contract-guardian
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: contract-guardian
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017
+
+---
+# FASTAPI BACKEND DEPLOYMENT
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: contract-guardian
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: backend
+          image: contract-guardian-backend:latest
+          imagePullPolicy: Never  # Use local image in dev
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: app-config
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: JWT_SECRET
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DATABASE_URL
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: contract-guardian
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+---
+# FRONTEND DEPLOYMENT
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: contract-guardian
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: contract-guardian-frontend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: contract-guardian
+spec:
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+
+---
+# NODE.JS ACTIVITY SERVICE
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-activity
+  namespace: contract-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-activity
+  template:
+    metadata:
+      labels:
+        app: node-activity
+    spec:
+      containers:
+        - name: node-activity
+          image: contract-guardian-node-activity:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3001
+          env:
+            - name: PORT
+              value: "3001"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-activity
+  namespace: contract-guardian
+spec:
+  selector:
+    app: node-activity
+  ports:
+    - port: 3001
+      targetPort: 3001
+
+---
+# INGRESS (CO6: Kubernetes Ingress)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: contract-guardian-ingress
+  namespace: contract-guardian
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: contract-guardian.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+    - host: activity.contract-guardian.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: node-activity
+                port:
+                  number: 3001

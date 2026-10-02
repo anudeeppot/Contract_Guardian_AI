@@ -1,0 +1,39 @@
+MASTER SERVICES AGREEMENT
+
+This Master Services Agreement is entered into between Acme Retail Inc. and VendorMax Solutions LLC.
+
+1. Services
+VendorMax shall provide managed software platform services and operational support for Acme Retail Inc.
+
+2. Payment
+Customer shall pay all invoices within 10 days. Vendor may add administrative fees, processing fees, or other charges at its sole discretion without prior notice. Late payments shall trigger a penalty of 75% of the unpaid amount.
+
+3. Term and Automatic Renewal
+The agreement begins on January 1, 2026 and automatically renews for successive one-year terms unless Customer gives written notice exactly 15 days before expiration.
+
+4. Liability
+Customer shall be liable for all direct, indirect, incidental, special, and consequential damages without limitation.
+
+5. Indemnification
+Customer shall indemnify and hold Vendor harmless from any and all claims, losses, damages, penalties, costs, and expenses arising directly or indirectly from this agreement.
+
+6. Intellectual Property
+Customer assigns all intellectual property, work product, feedback, ideas, data, and improvements to Vendor in perpetuity.
+
+7. Termination
+Customer may not terminate this agreement for convenience. Vendor may terminate immediately for any reason or no reason.
+
+8. Confidentiality
+Customer confidentiality obligations survive indefinitely. Vendor confidentiality obligations expire after 30 days.
+
+9. Governing Law
+This agreement is governed by the exclusive jurisdiction of a foreign court selected by Vendor at the time of dispute.
+
+10. Blank References
+Customer shall comply with all obligations listed in Exhibit [____], including additional payment terms to be inserted later.
+
+Signature:
+
+Customer: ____________________
+
+Vendor: ____________________

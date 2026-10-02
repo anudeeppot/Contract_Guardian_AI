@@ -1,0 +1,98 @@
+# =============================================================
+# Contract Guardian AI — .gitignore
+# =============================================================
+
+# Python
+.venv/
+.venv312/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+*.egg
+dist/
+build/
+*.so
+.mypy_cache/
+.ruff_cache/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Frontend build
+dist/
+build/
+*.tsbuildinfo
+
+# Java / Spring Boot
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Database runtime files (NOT SQL schema/migration files)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Environment secrets
+.env
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+
+# OS
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# uv lock (optional — keep if you use uv)
+# uv.lock
+
+# Python packaging lock (keep for reproducible builds)
+# poetry.lock
+
+# Extra safety
+.venv*/
+*.tsbuildinfo
+target/
+bin/
+obj/
+scripts/setup/.local-state/
